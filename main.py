@@ -125,33 +125,6 @@ PAYMENT_METHODS = ["In-game", "Vanguard", "Volt", "Voyager"]
 async def on_ready():
     print(f'Logged in as {bot.user}')
 
-    user_balance = balances.get(str(ctx.author.id), 0)
-    if user_balance < amount:
-        await ctx.send("Insufficient balance for withdrawal.")
-        return
-
-    # Send request to logs channel
-    log_channel = bot.get_channel(int(LOG_CHANNEL_ID))
-    
-    embed = discord.Embed(title="Withdrawal Request", color=discord.Color.red())
-    embed.add_field(name="Amount", value=f"${amount:.2f}", inline=True)
-    embed.add_field(name="Method", value=method, inline=True)
-    embed.add_field(name="In-game Name", value=in_game_name, inline=True)
-    embed.add_field(name="User", value=ctx.author.mention, inline=True)
-
-    await log_channel.send(
-        content=f"<@{ADMIN_ID}> New withdrawal request!",
-        embed=embed,
-        components=[
-            discord.ui.Button(style=discord.ButtonStyle.green, label="Accept", custom_id="accept_withdraw"),
-            discord.ui.Button(style=discord.ButtonStyle.red, label="Deny", custom_id="deny_withdraw")
-        ]
-    )
-
-    # DM luca
-    await ctx.author.send("Your withdrawal request has been submitted and will be reviewed by a staff member.")
-    await ctx.message.delete()
-
 @bot.event
 async def on_button_click(interaction: discord.Interaction):
     if not interaction.user.id == int(ADMIN_ID):
