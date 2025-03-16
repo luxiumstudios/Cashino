@@ -24,12 +24,9 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-from discord import app_commands
-
 bot = commands.Bot(command_prefix='/', intents=intents)
-tree = app_commands.CommandTree(bot)
 
-@tree.command(description="Deposit funds with proof")
+@bot.tree.command(description="Deposit funds with proof")
 async def deposit(interaction: discord.Interaction, amount: float, method: str, in_game_name: str):
     if method not in PAYMENT_METHODS:
         await interaction.response.send_message(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}")
@@ -63,7 +60,7 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
     # DM the user
     await interaction.user.send("Your deposit request has been submitted and will be reviewed by a staff member.")
 
-@tree.command(description="Withdraw funds")
+@bot.tree.command(description="Withdraw funds")
 async def withdraw(interaction: discord.Interaction, amount: float, method: str, in_game_name: str):
     if method not in PAYMENT_METHODS:
         await interaction.response.send_message(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}")
@@ -97,7 +94,7 @@ async def withdraw(interaction: discord.Interaction, amount: float, method: str,
 
 @bot.event
 async def setup_hook():
-    await tree.sync()
+    await bot.tree.sync()
 
 def get_user_data(user_id: str):
     conn = sqlite3.connect('users.db')
