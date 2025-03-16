@@ -91,8 +91,10 @@ async def deposit(ctx, amount: float, method: str, in_game_name: str):
     await ctx.message.delete()
 
 @bot.command()
-@discord.option("method", choices=PAYMENT_METHODS)
 async def withdraw(ctx, amount: float, method: str, in_game_name: str):
+    if method not in PAYMENT_METHODS:
+        await ctx.send(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}")
+        return
 
     user_balance = balances.get(str(ctx.author.id), 0)
     if user_balance < amount:
