@@ -44,6 +44,9 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
     
     # Send request to logs channel
     log_channel = bot.get_channel(int(LOG_CHANNEL_ID))
+    if not log_channel:
+        await interaction.response.send_message("Error: Could not find logging channel. Please contact an administrator.", ephemeral=True)
+        return
     
     embed = discord.Embed(title="Deposit Request", color=discord.Color.blue())
     embed.add_field(name="Amount", value=f"${amount:.2f}", inline=True)
