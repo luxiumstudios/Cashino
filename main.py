@@ -55,7 +55,7 @@ PAYMENT_METHODS = ["In-game", "Vanguard", "Volt", "Voyager"]
 async def on_ready():
     print(f'Logged in as {bot.user}')
 
-@bot.command()
+@bot.slash_command(description="Deposit funds with proof")
 async def deposit(ctx, amount: float, method: str, in_game_name: str):
     if method not in PAYMENT_METHODS:
         await ctx.send(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}")
@@ -90,7 +90,7 @@ async def deposit(ctx, amount: float, method: str, in_game_name: str):
     await ctx.author.send("Your deposit request has been submitted and will be reviewed by a staff member.")
     await ctx.message.delete()
 
-@bot.command()
+@bot.slash_command(description="Withdraw funds")
 async def withdraw(ctx, amount: float, method: str, in_game_name: str):
     if method not in PAYMENT_METHODS:
         await ctx.send(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}")
