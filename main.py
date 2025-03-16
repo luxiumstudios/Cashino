@@ -131,6 +131,7 @@ PAYMENT_METHODS = ["In-game", "Vanguard", "Volt", "Voyager"]
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name='the Cashino'))
 
 @bot.event
 async def on_button_click(interaction: discord.Interaction):
