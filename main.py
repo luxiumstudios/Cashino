@@ -15,9 +15,9 @@ bot = commands.Bot(command_prefix='/', intents=intents)
 # Store balances (in a real application, use a database)
 balances: Dict[str, float] = {}
 
-# ID of the admin to ping (replace with your ID)
-ADMIN_ID = "YOUR_DISCORD_ID_HERE"
-LOG_CHANNEL_ID = "YOUR_CHANNEL_ID_HERE"  # withdrawal-deposit-request-logs channel ID
+
+ADMIN_ID = "1107732198221680760"
+LOG_CHANNEL_ID = "1348308761470828596"
 
 PAYMENT_METHODS = ["In-game", "Vanguard", "Volt", "Voyager"]
 
@@ -89,7 +89,7 @@ async def withdraw(ctx, amount: float, method: str, in_game_name: str):
         ]
     )
 
-    # DM the user
+    # DM luca
     await ctx.author.send("Your withdrawal request has been submitted and will be reviewed by a staff member.")
     await ctx.message.delete()
 
