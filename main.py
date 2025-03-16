@@ -128,47 +128,6 @@ PAYMENT_METHODS = ["In-game", "Vanguard", "Volt", "Voyager"]
 async def on_ready():
     print(f'Logged in as {bot.user}')
 
-@bot.slash_command(description="Deposit funds with proof")
-async def deposit(ctx, amount: float, method: str, in_game_name: str):
-    if method not in PAYMENT_METHODS:
-        await ctx.send(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}")
-        return
-
-    if not ctx.message.attachments:
-        await ctx.send("Please attach a screenshot of your deposit.")
-        return
-
-    screenshot = ctx.message.attachments[0]
-    
-    # Send request to logs channel
-    log_channel = bot.get_channel(int(LOG_CHANNEL_ID))
-    
-    embed = discord.Embed(title="Deposit Request", color=discord.Color.blue())
-    embed.add_field(name="Amount", value=f"${amount:.2f}", inline=True)
-    embed.add_field(name="Method", value=method, inline=True)
-    embed.add_field(name="In-game Name", value=in_game_name, inline=True)
-    embed.add_field(name="User", value=ctx.author.mention, inline=True)
-    embed.set_image(url=screenshot.url)
-
-    log_message = await log_channel.send(
-        content=f"<@{ADMIN_ID}> New deposit request!",
-        embed=embed,
-        components=[
-            discord.ui.Button(style=discord.ButtonStyle.green, label="Accept", custom_id="accept_deposit"),
-            discord.ui.Button(style=discord.ButtonStyle.red, label="Deny", custom_id="deny_deposit")
-        ]
-    )
-
-    # DM the user
-    await ctx.author.send("Your deposit request has been submitted and will be reviewed by a staff member.")
-    await ctx.message.delete()
-
-@bot.slash_command(description="Withdraw funds")
-async def withdraw(ctx, amount: float, method: str, in_game_name: str):
-    if method not in PAYMENT_METHODS:
-        await ctx.send(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}")
-        return
-
     user_balance = balances.get(str(ctx.author.id), 0)
     if user_balance < amount:
         await ctx.send("Insufficient balance for withdrawal.")
