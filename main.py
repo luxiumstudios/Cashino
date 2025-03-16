@@ -2,8 +2,22 @@
 import os
 import discord
 from discord.ext import commands
-import json
+import sqlite3
 from typing import Dict
+
+# Initialize database
+def init_db():
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users
+                 (user_id TEXT PRIMARY KEY, 
+                  balance REAL,
+                  in_game_name TEXT,
+                  discord_name TEXT)''')
+    conn.commit()
+    conn.close()
+
+init_db()
 
 # Initialize bot with command prefix and intents
 intents = discord.Intents.default()
@@ -12,9 +26,25 @@ intents.members = True
 
 bot = commands.Bot(command_prefix='/', intents=intents)
 
-# Store balances (in a real application, use a database)
-balances: Dict[str, float] = {}
+def get_user_data(user_id: str):
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('SELECT * FROM users WHERE user_id = ?', (user_id,))
+    result = c.fetchone()
+    conn.close()
+    if result:
+        return {"balance": result[1], "in_game_name": result[2], "discord_name": result[3]}
+    return {"balance": 0, "in_game_name": "", "discord_name": ""}
 
+def save_user_data(user_id: str, data: dict):
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('''INSERT OR REPLACE INTO users 
+                 (user_id, balance, in_game_name, discord_name)
+                 VALUES (?, ?, ?, ?)''',
+              (user_id, data["balance"], data["in_game_name"], data["discord_name"]))
+    conn.commit()
+    conn.close()
 
 ADMIN_ID = "1107732198221680760"
 LOG_CHANNEL_ID = "1348308761470828596"
@@ -105,13 +135,15 @@ async def on_button_click(interaction: discord.Interaction):
     user = await bot.fetch_user(int(user_id))
 
     if custom_id in ["accept_deposit", "accept_withdraw"]:
+        user_data = get_user_data(user_id)
         if custom_id == "accept_deposit":
-            balances[user_id] = balances.get(user_id, 0) + amount
+            user_data["balance"] += amount
             await user.send(f"Your deposit of ${amount:.2f} has been approved!")
         else:
-            balances[user_id] = balances.get(user_id, 0) - amount
+            user_data["balance"] -= amount
             await user.send(f"Your withdrawal of ${amount:.2f} has been approved!")
         
+        save_user_data(user_id, user_data)
         await message.edit(components=[])
         await interaction.response.send_message("Request approved!", ephemeral=True)
     
