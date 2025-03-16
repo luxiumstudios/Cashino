@@ -29,16 +29,18 @@ bot = commands.Bot(
 )
 
 @bot.tree.command(description="Deposit funds with proof")
-async def deposit(interaction: discord.Interaction, amount: float, method: str, in_game_name: str):
+@discord.app_commands.describe(
+    amount="Amount to deposit",
+    method="Payment method",
+    in_game_name="Your in-game name",
+    proof="Screenshot of your deposit"
+)
+async def deposit(interaction: discord.Interaction, amount: float, method: str, in_game_name: str, proof: discord.Attachment):
     if method not in PAYMENT_METHODS:
         await interaction.response.send_message(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}")
         return
 
-    if not interaction.message.attachments:
-        await interaction.response.send_message("Please attach a screenshot of your deposit.")
-        return
-
-    screenshot = interaction.message.attachments[0]
+    screenshot = proof
     
     # Send request to logs channel
     log_channel = bot.get_channel(int(LOG_CHANNEL_ID))
