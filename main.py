@@ -20,11 +20,13 @@ def init_db():
 init_db()
 
 # Initialize bot with command prefix and intents
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
+intents = discord.Intents.all()
 
-bot = commands.Bot(command_prefix='/', intents=intents)
+bot = commands.Bot(
+    command_prefix='/',
+    intents=intents,
+    application_id=os.getenv("APPLICATION_ID")
+)
 
 @bot.tree.command(description="Deposit funds with proof")
 async def deposit(interaction: discord.Interaction, amount: float, method: str, in_game_name: str):
