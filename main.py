@@ -59,7 +59,7 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
     view.add_item(discord.ui.Button(style=discord.ButtonStyle.red, label="Deny", custom_id="deny_deposit"))
 
     log_message = await log_channel.send(
-        content=f"<@{ADMIN_ID}> New deposit request!",
+        content=f"<@{ADMIN_IDS[0]}> New deposit request!",
         embed=embed,
         view=view
     )
@@ -92,7 +92,7 @@ async def withdraw(interaction: discord.Interaction, amount: float, method: str,
     view.add_item(discord.ui.Button(style=discord.ButtonStyle.red, label="Deny", custom_id="deny_withdraw"))
 
     await log_channel.send(
-        content=f"<@{ADMIN_ID}> New withdrawal request!",
+        content=f"<@{ADMIN_IDS[0]}> New withdrawal request!",
         embed=embed,
         view=view
     )
@@ -124,7 +124,7 @@ def save_user_data(user_id: str, data: dict):
     conn.commit()
     conn.close()
 
-ADMIN_ID = "1107732198221680760"
+ADMIN_IDS = ["1107732198221680760", "1314310123421831198"]  # List of admin IDs
 LOG_CHANNEL_ID = "1348308761470828596"
 
 PAYMENT_METHODS = ["In-game", "Vanguard", "Volt", "Voyager"]
@@ -136,7 +136,7 @@ async def on_ready():
 
 @bot.event
 async def on_button_click(interaction: discord.Interaction):
-    if not interaction.user.id == int(ADMIN_ID):
+    if str(interaction.user.id) not in ADMIN_IDS:
         await interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
         return
 
@@ -151,10 +151,10 @@ async def on_button_click(interaction: discord.Interaction):
         user_data = get_user_data(user_id)
         if custom_id == "accept_deposit":
             user_data["balance"] += amount
-            await user.send(f"Your deposit of ${amount:.2f} has been approved!")
+            await user.send(f"Your deposit of ${amount:.2f} has been approved by {interaction.user.name}!")
         else:
             user_data["balance"] -= amount
-            await user.send(f"Your withdrawal of ${amount:.2f} has been approved!")
+            await user.send(f"Your withdrawal of ${amount:.2f} has been approved by {interaction.user.name}!")
         
         save_user_data(user_id, user_data)
         await message.edit(view=None)
@@ -162,7 +162,7 @@ async def on_button_click(interaction: discord.Interaction):
     
     elif custom_id in ["deny_deposit", "deny_withdraw"]:
         action = "deposit" if custom_id == "deny_deposit" else "withdrawal"
-        await user.send(f"Your {action} request of ${amount:.2f} has been denied.")
+        await user.send(f"Your {action} request of ${amount:.2f} has been denied by {interaction.user.name}.")
         await message.edit(view=None)
         await interaction.response.send_message("Request denied!", ephemeral=True)
 
