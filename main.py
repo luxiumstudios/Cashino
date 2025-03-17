@@ -137,8 +137,8 @@ async def on_ready():
 @bot.event
 async def on_button_click(interaction: discord.Interaction):
     try:
-        # Defer the interaction immediately to prevent the "interaction failed" message
-        await interaction.response.defer()
+        # First, defer the interaction
+        await interaction.response.defer(ephemeral=True)
 
         if str(interaction.user.id) not in ADMIN_IDS:
             await interaction.followup.send("You are not authorized to perform this action.", ephemeral=True)
@@ -170,9 +170,12 @@ async def on_button_click(interaction: discord.Interaction):
 
     except Exception as e:
         print(f"Error in on_button_click: {e}")
-        if not interaction.response.is_done():
-            await interaction.response.defer()
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.defer(ephemeral=True)
             await interaction.followup.send("An error occurred while processing your request.", ephemeral=True)
+        except:
+            print(f"Failed to send error message: {e}")
 
 try:
     token = os.getenv("TOKEN") or ""
