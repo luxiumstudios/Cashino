@@ -1,4 +1,3 @@
-
 import os
 import discord
 from discord.ext import commands
@@ -55,13 +54,14 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
     embed.add_field(name="User", value=interaction.user.mention, inline=True)
     embed.set_image(url=screenshot.url)
 
+    view = discord.ui.View()
+    view.add_item(discord.ui.Button(style=discord.ButtonStyle.green, label="Accept", custom_id="accept_deposit"))
+    view.add_item(discord.ui.Button(style=discord.ButtonStyle.red, label="Deny", custom_id="deny_deposit"))
+
     log_message = await log_channel.send(
         content=f"<@{ADMIN_ID}> New deposit request!",
         embed=embed,
-        components=[
-            discord.ui.Button(style=discord.ButtonStyle.green, label="Accept", custom_id="accept_deposit"),
-            discord.ui.Button(style=discord.ButtonStyle.red, label="Deny", custom_id="deny_deposit")
-        ]
+        view=view
     )
 
     # DM the user
@@ -87,13 +87,14 @@ async def withdraw(interaction: discord.Interaction, amount: float, method: str,
     embed.add_field(name="In-game Name", value=in_game_name, inline=True)
     embed.add_field(name="User", value=interaction.user.mention, inline=True)
 
+    view = discord.ui.View()
+    view.add_item(discord.ui.Button(style=discord.ButtonStyle.green, label="Accept", custom_id="accept_withdraw"))
+    view.add_item(discord.ui.Button(style=discord.ButtonStyle.red, label="Deny", custom_id="deny_withdraw"))
+
     await log_channel.send(
         content=f"<@{ADMIN_ID}> New withdrawal request!",
         embed=embed,
-        components=[
-            discord.ui.Button(style=discord.ButtonStyle.green, label="Accept", custom_id="accept_withdraw"),
-            discord.ui.Button(style=discord.ButtonStyle.red, label="Deny", custom_id="deny_withdraw")
-        ]
+        view=view
     )
 
     # DM the user
