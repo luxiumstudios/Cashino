@@ -157,13 +157,13 @@ async def on_button_click(interaction: discord.Interaction):
             await user.send(f"Your withdrawal of ${amount:.2f} has been approved!")
         
         save_user_data(user_id, user_data)
-        await message.edit(components=[])
+        await message.edit(view=None)
         await interaction.response.send_message("Request approved!", ephemeral=True)
     
     elif custom_id in ["deny_deposit", "deny_withdraw"]:
         action = "deposit" if custom_id == "deny_deposit" else "withdrawal"
         await user.send(f"Your {action} request of ${amount:.2f} has been denied.")
-        await message.edit(components=[])
+        await message.edit(view=None)
         await interaction.response.send_message("Request denied!", ephemeral=True)
 
 try:
