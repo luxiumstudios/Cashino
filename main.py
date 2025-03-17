@@ -148,10 +148,9 @@ async def on_button_click(interaction: discord.Interaction):
         amount = float(embed.fields[0].value[1:])  # Extract amount
         user = await bot.fetch_user(int(user_id))
 
-        # Defer the response immediately to prevent timeout
-        await interaction.response.defer(ephemeral=True)
-
+        # Respond immediately to the interaction
         if custom_id in ["accept_deposit", "accept_withdraw"]:
+            await interaction.response.send_message("Processing approval...", ephemeral=True)
             user_data = get_user_data(user_id)
             if custom_id == "accept_deposit":
                 user_data["balance"] += amount
@@ -165,6 +164,7 @@ async def on_button_click(interaction: discord.Interaction):
             await interaction.followup.send("Request approved!", ephemeral=True)
         
         elif custom_id in ["deny_deposit", "deny_withdraw"]:
+            await interaction.response.send_message("Processing denial...", ephemeral=True)
             action = "deposit" if custom_id == "deny_deposit" else "withdrawal"
             await user.send(f"Your {action} request of ${amount:.2f} has been denied by {interaction.user.name}.")
             await message.edit(view=None)
@@ -172,7 +172,10 @@ async def on_button_click(interaction: discord.Interaction):
     except Exception as e:
         print(f"Error in on_button_click: {e}")
         try:
-            await interaction.followup.send("An error occurred while processing your request.", ephemeral=True)
+            if not interaction.response.is_done():
+                await interaction.response.send_message("An error occurred while processing your request.", ephemeral=True)
+            else:
+                await interaction.followup.send("An error occurred while processing your request.", ephemeral=True)
         except:
             pass
 
