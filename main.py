@@ -136,35 +136,45 @@ async def on_ready():
 
 @bot.event
 async def on_button_click(interaction: discord.Interaction):
-    if str(interaction.user.id) not in ADMIN_IDS:
-        await interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
-        return
+    try:
+        if str(interaction.user.id) not in ADMIN_IDS:
+            await interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
+            return
 
-    custom_id = interaction.custom_id
-    message = interaction.message
-    embed = message.embeds[0]
-    user_id = embed.fields[3].value[2:-1]  # Extract user ID from mention
-    amount = float(embed.fields[0].value[1:])  # Extract amount
-    user = await bot.fetch_user(int(user_id))
+        custom_id = interaction.custom_id
+        message = interaction.message
+        embed = message.embeds[0]
+        user_id = embed.fields[3].value[2:-1]  # Extract user ID from mention
+        amount = float(embed.fields[0].value[1:])  # Extract amount
+        user = await bot.fetch_user(int(user_id))
 
-    if custom_id in ["accept_deposit", "accept_withdraw"]:
-        user_data = get_user_data(user_id)
-        if custom_id == "accept_deposit":
-            user_data["balance"] += amount
-            await user.send(f"Your deposit of ${amount:.2f} has been approved by {interaction.user.name}!")
-        else:
-            user_data["balance"] -= amount
-            await user.send(f"Your withdrawal of ${amount:.2f} has been approved by {interaction.user.name}!")
+        # Defer the response immediately to prevent timeout
+        await interaction.response.defer(ephemeral=True)
+
+        if custom_id in ["accept_deposit", "accept_withdraw"]:
+            user_data = get_user_data(user_id)
+            if custom_id == "accept_deposit":
+                user_data["balance"] += amount
+                await user.send(f"Your deposit of ${amount:.2f} has been approved by {interaction.user.name}!")
+            else:
+                user_data["balance"] -= amount
+                await user.send(f"Your withdrawal of ${amount:.2f} has been approved by {interaction.user.name}!")
+            
+            save_user_data(user_id, user_data)
+            await message.edit(view=None)
+            await interaction.followup.send("Request approved!", ephemeral=True)
         
-        save_user_data(user_id, user_data)
-        await message.edit(view=None)
-        await interaction.response.send_message("Request approved!", ephemeral=True)
-    
-    elif custom_id in ["deny_deposit", "deny_withdraw"]:
-        action = "deposit" if custom_id == "deny_deposit" else "withdrawal"
-        await user.send(f"Your {action} request of ${amount:.2f} has been denied by {interaction.user.name}.")
-        await message.edit(view=None)
-        await interaction.response.send_message("Request denied!", ephemeral=True)
+        elif custom_id in ["deny_deposit", "deny_withdraw"]:
+            action = "deposit" if custom_id == "deny_deposit" else "withdrawal"
+            await user.send(f"Your {action} request of ${amount:.2f} has been denied by {interaction.user.name}.")
+            await message.edit(view=None)
+            await interaction.followup.send("Request denied!", ephemeral=True)
+    except Exception as e:
+        print(f"Error in on_button_click: {e}")
+        try:
+            await interaction.followup.send("An error occurred while processing your request.", ephemeral=True)
+        except:
+            pass
 
 try:
     token = os.getenv("TOKEN") or ""
