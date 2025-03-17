@@ -137,8 +137,11 @@ async def on_ready():
 @bot.event
 async def on_button_click(interaction: discord.Interaction):
     try:
+        # Defer the interaction immediately to prevent the "interaction failed" message
+        await interaction.response.defer()
+
         if str(interaction.user.id) not in ADMIN_IDS:
-            await interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
+            await interaction.followup.send("You are not authorized to perform this action.", ephemeral=True)
             return
 
         custom_id = interaction.custom_id
@@ -146,17 +149,6 @@ async def on_button_click(interaction: discord.Interaction):
         embed = message.embeds[0]
         user_id = embed.fields[3].value[2:-1]  # Extract user ID from mention
         amount = float(embed.fields[0].value[1:])  # Extract amount
-
-        # Respond immediately
-        if custom_id in ["accept_deposit", "accept_withdraw"]:
-            await interaction.response.send_message("Request approved!", ephemeral=True)
-        else:
-            await interaction.response.send_message("Request denied!", ephemeral=True)
-
-        # Disable the buttons immediately
-        await message.edit(view=None)
-
-        # Handle the rest of the operations after responding
         user = await bot.fetch_user(int(user_id))
         
         if custom_id in ["accept_deposit", "accept_withdraw"]:
@@ -168,14 +160,19 @@ async def on_button_click(interaction: discord.Interaction):
                 user_data["balance"] -= amount
                 await user.send(f"Your withdrawal of ${amount:.2f} has been approved by {interaction.user.name}!")
             save_user_data(user_id, user_data)
+            await message.edit(view=None)
+            await interaction.followup.send("Request approved!", ephemeral=True)
         else:
             action = "deposit" if custom_id == "deny_deposit" else "withdrawal"
             await user.send(f"Your {action} request of ${amount:.2f} has been denied by {interaction.user.name}.")
+            await message.edit(view=None)
+            await interaction.followup.send("Request denied!", ephemeral=True)
 
     except Exception as e:
         print(f"Error in on_button_click: {e}")
         if not interaction.response.is_done():
-            await interaction.response.send_message("An error occurred while processing your request.", ephemeral=True)
+            await interaction.response.defer()
+            await interaction.followup.send("An error occurred while processing your request.", ephemeral=True)
 
 try:
     token = os.getenv("TOKEN") or ""
