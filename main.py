@@ -35,7 +35,7 @@ bot = commands.Bot(
     proof="Screenshot of your deposit"
 )
 async def deposit(interaction: discord.Interaction, amount: float, method: str, in_game_name: str, proof: discord.Attachment):
-    # Defer the interaction immediately
+    # Defer immediately to prevent timeout
     await interaction.response.defer(ephemeral=True)
 
     if method not in PAYMENT_METHODS:
@@ -73,7 +73,7 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
 
 @bot.tree.command(description="Withdraw funds")
 async def withdraw(interaction: discord.Interaction, amount: float, method: str, in_game_name: str):
-    # Defer the interaction immediately
+    # Defer immediately to prevent timeout
     await interaction.response.defer(ephemeral=True)
 
     if method not in PAYMENT_METHODS:
@@ -145,7 +145,7 @@ async def on_ready():
 @bot.event
 async def on_button_click(interaction: discord.Interaction):
     try:
-        # Defer the interaction immediately
+        # Defer immediately to prevent timeout
         await interaction.response.defer(ephemeral=True)
 
         # Check if user has Admin role
