@@ -35,8 +35,11 @@ bot = commands.Bot(
     proof="Screenshot of your deposit"
 )
 async def deposit(interaction: discord.Interaction, amount: float, method: str, in_game_name: str, proof: discord.Attachment):
+    # Defer the interaction immediately
+    await interaction.response.defer(ephemeral=True)
+
     if method not in PAYMENT_METHODS:
-        await interaction.response.send_message(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}")
+        await interaction.followup.send(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}", ephemeral=True)
         return
 
     screenshot = proof
@@ -44,7 +47,7 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
     # Send request to logs channel
     log_channel = bot.get_channel(int(LOG_CHANNEL_ID))
     if not log_channel:
-        await interaction.response.send_message("Error: Could not find logging channel. Please contact an administrator.", ephemeral=True)
+        await interaction.followup.send("Error: Could not find logging channel. Please contact an administrator.", ephemeral=True)
         return
     
     embed = discord.Embed(title="Deposit Request", color=discord.Color.blue())
@@ -58,7 +61,7 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
     view.add_item(discord.ui.Button(style=discord.ButtonStyle.green, label="Accept", custom_id="accept_deposit"))
     view.add_item(discord.ui.Button(style=discord.ButtonStyle.red, label="Deny", custom_id="deny_deposit"))
 
-    log_message = await log_channel.send(
+    await log_channel.send(
         content=f"<@{ADMIN_IDS[0]}> New deposit request!",
         embed=embed,
         view=view
@@ -66,16 +69,20 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
 
     # DM the user
     await interaction.user.send("Your deposit request has been submitted and will be reviewed by a staff member.")
+    await interaction.followup.send("Your deposit request has been submitted successfully!", ephemeral=True)
 
 @bot.tree.command(description="Withdraw funds")
 async def withdraw(interaction: discord.Interaction, amount: float, method: str, in_game_name: str):
+    # Defer the interaction immediately
+    await interaction.response.defer(ephemeral=True)
+
     if method not in PAYMENT_METHODS:
-        await interaction.response.send_message(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}")
+        await interaction.followup.send(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}", ephemeral=True)
         return
 
     user_balance = get_user_data(str(interaction.user.id))["balance"]
     if user_balance < amount:
-        await interaction.response.send_message("Insufficient balance for withdrawal.")
+        await interaction.followup.send("Insufficient balance for withdrawal.", ephemeral=True)
         return
 
     # Send request to logs channel
@@ -99,6 +106,7 @@ async def withdraw(interaction: discord.Interaction, amount: float, method: str,
 
     # DM the user
     await interaction.user.send("Your withdrawal request has been submitted and will be reviewed by a staff member.")
+    await interaction.followup.send("Your withdrawal request has been submitted successfully!", ephemeral=True)
 
 @bot.event
 async def setup_hook():
@@ -137,7 +145,7 @@ async def on_ready():
 @bot.event
 async def on_button_click(interaction: discord.Interaction):
     try:
-        # First, defer the interaction
+        # Defer the interaction immediately
         await interaction.response.defer(ephemeral=True)
 
         if str(interaction.user.id) not in ADMIN_IDS:
