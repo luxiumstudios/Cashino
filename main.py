@@ -62,7 +62,7 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
     view.add_item(discord.ui.Button(style=discord.ButtonStyle.red, label="Deny", custom_id="deny_deposit"))
 
     await log_channel.send(
-        content=f"<@{ADMIN_IDS[0]}> New deposit request!",
+        content="@Admin New deposit request!",
         embed=embed,
         view=view
     )
@@ -99,7 +99,7 @@ async def withdraw(interaction: discord.Interaction, amount: float, method: str,
     view.add_item(discord.ui.Button(style=discord.ButtonStyle.red, label="Deny", custom_id="deny_withdraw"))
 
     await log_channel.send(
-        content=f"<@{ADMIN_IDS[0]}> New withdrawal request!",
+        content="@Admin New withdrawal request!",
         embed=embed,
         view=view
     )
@@ -148,7 +148,8 @@ async def on_button_click(interaction: discord.Interaction):
         # Defer the interaction immediately
         await interaction.response.defer(ephemeral=True)
 
-        if str(interaction.user.id) not in ADMIN_IDS:
+        # Check if user has Admin role
+        if not any(role.name == "Admin" for role in interaction.user.roles):
             await interaction.followup.send("You are not authorized to perform this action.", ephemeral=True)
             return
 
