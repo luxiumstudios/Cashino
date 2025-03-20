@@ -12,6 +12,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (user_id TEXT PRIMARY KEY,
                   balance REAL DEFAULT 0.0,
+                  credit REAL DEFAULT 0.0,
                   in_game_name TEXT,
                   discord_name TEXT)''')
     conn.commit()
@@ -61,8 +62,13 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
     # Get current user data
     user_data = get_user_data(str(interaction.user.id))
     
+    # Check if user is registered
+    if not user_data["in_game_name"]:
+        await interaction.followup.send("You need to register first using `/register`!", ephemeral=True)
+        return
+    
     # Security check: Verify in-game name matches stored name
-    if user_data["in_game_name"] and user_data["in_game_name"] != in_game_name:
+    if user_data["in_game_name"] != in_game_name:
         await interaction.followup.send(
             "Fraud detected.",
             ephemeral=True
@@ -129,8 +135,13 @@ async def withdraw(interaction: discord.Interaction, amount: float, method: str,
     # Get current user data
     user_data = get_user_data(str(interaction.user.id))
     
+    # Check if user is registered
+    if not user_data["in_game_name"]:
+        await interaction.followup.send("You need to register first using `/register`!", ephemeral=True)
+        return
+    
     # Security check: Verify in-game name matches stored name
-    if user_data["in_game_name"] and user_data["in_game_name"] != in_game_name:
+    if user_data["in_game_name"] != in_game_name:
         await interaction.followup.send(
             "Fraud detected.",
             ephemeral=True
@@ -261,18 +272,44 @@ async def deny(interaction: discord.Interaction, transfer_id: str):
         print(f"Error in deny command: {e}")
         await interaction.followup.send("An error occurred while processing the transfer.", ephemeral=True)
 
-@bot.tree.command(description="Check your current balance")
-async def balance(interaction: discord.Interaction):
-    # Defer immediately to prevent timeout
+@bot.tree.command(description="Register your account with your in-game name")
+@discord.app_commands.describe(
+    in_game_name="Your in-game name"
+)
+async def register(interaction: discord.Interaction, in_game_name: str):
     await interaction.response.defer(ephemeral=True)
-
-    # Get user data
+    
+    # Get current user data
     user_data = get_user_data(str(interaction.user.id))
     
-    embed = discord.Embed(title="Balance Check", color=discord.Color.green())
-    embed.add_field(name="Balance", value=f"${user_data['balance']:.2f}", inline=True)
+    # Check if user is already registered
     if user_data["in_game_name"]:
-        embed.add_field(name="In-game Name", value=user_data["in_game_name"], inline=True)
+        await interaction.followup.send("You are already registered!", ephemeral=True)
+        return
+    
+    # Update user data with in-game name, Discord name, and initial credit
+    user_data["in_game_name"] = in_game_name
+    user_data["discord_name"] = str(interaction.user)
+    user_data["credit"] = 200.0  # Set initial credit to 200
+    
+    save_user_data(str(interaction.user.id), user_data)
+    
+    await interaction.followup.send(f"Successfully registered with in-game name: {in_game_name}\nYou received 200 credit!", ephemeral=True)
+
+@bot.tree.command(description="Check your current balance and credit")
+async def balance(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    
+    user_data = get_user_data(str(interaction.user.id))
+    
+    if not user_data["in_game_name"]:
+        await interaction.followup.send("You need to register first using `/register`!", ephemeral=True)
+        return
+    
+    embed = discord.Embed(title="Your Balance", color=discord.Color.blue())
+    embed.add_field(name="Balance", value=f"${user_data['balance']:.2f}", inline=True)
+    embed.add_field(name="Credit", value=f"${user_data['credit']:.2f}", inline=True)
+    embed.add_field(name="In-game Name", value=user_data["in_game_name"], inline=True)
     
     await interaction.followup.send(embed=embed, ephemeral=True)
 
@@ -289,22 +326,23 @@ def get_user_data(user_id: str) -> Dict:
     
     if row is None:
         # Create new user if they don't exist
-        default_data = {"balance": 0.0, "in_game_name": "", "discord_name": ""}
+        default_data = {"balance": 0.0, "credit": 0.0, "in_game_name": "", "discord_name": ""}
         save_user_data(user_id, default_data)
         return default_data
     
     return {
         "balance": row[1],
-        "in_game_name": row[2] or "",
-        "discord_name": row[3] or ""
+        "credit": row[2],
+        "in_game_name": row[3] or "",
+        "discord_name": row[4] or ""
     }
 
 def save_user_data(user_id: str, data: dict):
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
-    c.execute('''INSERT OR REPLACE INTO users (user_id, balance, in_game_name, discord_name)
-                 VALUES (?, ?, ?, ?)''',
-              (user_id, data["balance"], data.get("in_game_name", ""), data.get("discord_name", "")))
+    c.execute('''INSERT OR REPLACE INTO users (user_id, balance, credit, in_game_name, discord_name)
+                 VALUES (?, ?, ?, ?, ?)''',
+              (user_id, data["balance"], data["credit"], data.get("in_game_name", ""), data.get("discord_name", "")))
     conn.commit()
     conn.close()
 
