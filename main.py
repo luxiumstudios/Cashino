@@ -64,8 +64,7 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
     # Security check: Verify in-game name matches stored name
     if user_data["in_game_name"] and user_data["in_game_name"] != in_game_name:
         await interaction.followup.send(
-            "Security check failed: The provided in-game name does not match your previously registered name. "
-            "If you have changed your in-game name, please contact an administrator to update your records.",
+            "Fraud detected.",
             ephemeral=True
         )
         return
@@ -120,11 +119,6 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
     transfer_number="Optional transfer number for tracking"
 )
 async def withdraw(interaction: discord.Interaction, amount: float, method: str, in_game_name: str, transfer_number: str = None):
-    # Check if command is used in the correct channel
-    if not is_requests_channel(str(interaction.channel_id)):
-        await interaction.response.send_message("This command can only be used in the deposit/withdrawal requests channel.", ephemeral=True)
-        return
-
     # Defer immediately to prevent timeout
     await interaction.response.defer(ephemeral=True)
 
@@ -138,8 +132,7 @@ async def withdraw(interaction: discord.Interaction, amount: float, method: str,
     # Security check: Verify in-game name matches stored name
     if user_data["in_game_name"] and user_data["in_game_name"] != in_game_name:
         await interaction.followup.send(
-            "Security check failed: The provided in-game name does not match your previously registered name. "
-            "If you have changed your in-game name, please contact an administrator to update your records.",
+            "Fraud detected.",
             ephemeral=True
         )
         return
