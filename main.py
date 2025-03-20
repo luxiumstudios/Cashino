@@ -101,7 +101,7 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
     }
 
     message = await log_channel.send(
-        content="@Admin New deposit request!",
+        content="<&@1305276306455265400> New deposit request!",
         embed=embed
     )
     
@@ -164,7 +164,7 @@ async def withdraw(interaction: discord.Interaction, amount: float, method: str,
     }
 
     message = await log_channel.send(
-        content="@Admin New withdrawal request!",
+        content="<&@1305276306455265400> New withdrawal request!",
         embed=embed
     )
     
