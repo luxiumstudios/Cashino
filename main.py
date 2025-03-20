@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 import sqlite3
 from typing import Dict
+import random
 
 # Initialize database
 def init_db():
@@ -20,6 +21,21 @@ bot = commands.Bot(
     application_id=os.getenv("APPLICATION_ID")
 )
 
+# Store pending transfers
+pending_transfers = {}
+
+def generate_transfer_id():
+    return str(random.randint(1000, 9999))
+
+ADMIN_IDS = ["1107732198221680760", "1314310123421831198"]  # List of admin IDs
+LOG_CHANNEL_ID = "1348308761470828596"
+REQUESTS_CHANNEL_ID = "1348308761470828596"  # Channel where deposit/withdraw requests are allowed
+
+PAYMENT_METHODS = ["In-game", "Vanguard", "Volt", "Voyager"]
+
+def is_requests_channel(channel_id: str) -> bool:
+    return str(channel_id) == REQUESTS_CHANNEL_ID
+
 @bot.tree.command(description="Deposit funds with proof")
 @discord.app_commands.describe(
     amount="Amount to deposit",
@@ -28,6 +44,11 @@ bot = commands.Bot(
     proof="Screenshot of your deposit"
 )
 async def deposit(interaction: discord.Interaction, amount: float, method: str, in_game_name: str, proof: discord.Attachment):
+    # Check if command is used in the correct channel
+    if not is_requests_channel(str(interaction.channel_id)):
+        await interaction.response.send_message("This command can only be used in the deposit/withdrawal requests channel.", ephemeral=True)
+        return
+
     # Defer immediately to prevent timeout
     await interaction.response.defer(ephemeral=True)
 
@@ -36,6 +57,7 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
         return
 
     screenshot = proof
+    transfer_id = generate_transfer_id()
     
     # Send request to logs channel
     log_channel = bot.get_channel(int(LOG_CHANNEL_ID))
@@ -44,28 +66,40 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
         return
     
     embed = discord.Embed(title="Deposit Request", color=discord.Color.blue())
+    embed.add_field(name="Transfer ID", value=transfer_id, inline=True)
     embed.add_field(name="Amount", value=f"${amount:.2f}", inline=True)
     embed.add_field(name="Method", value=method, inline=True)
     embed.add_field(name="In-game Name", value=in_game_name, inline=True)
     embed.add_field(name="User", value=interaction.user.mention, inline=True)
     embed.set_image(url=screenshot.url)
 
-    view = discord.ui.View()
-    view.add_item(discord.ui.Button(style=discord.ButtonStyle.green, label="Accept", custom_id="accept_deposit"))
-    view.add_item(discord.ui.Button(style=discord.ButtonStyle.red, label="Deny", custom_id="deny_deposit"))
+    # Store transfer details
+    pending_transfers[transfer_id] = {
+        "type": "deposit",
+        "user_id": str(interaction.user.id),
+        "amount": amount,
+        "message_id": None
+    }
 
-    await log_channel.send(
+    message = await log_channel.send(
         content="@Admin New deposit request!",
-        embed=embed,
-        view=view
+        embed=embed
     )
+    
+    # Store message ID
+    pending_transfers[transfer_id]["message_id"] = message.id
 
     # DM the user
-    await interaction.user.send("Your deposit request has been submitted and will be reviewed by a staff member.")
-    await interaction.followup.send("Your deposit request has been submitted successfully!", ephemeral=True)
+    await interaction.user.send(f"Your deposit request has been submitted. Transfer ID: {transfer_id}")
+    await interaction.followup.send(f"Your deposit request has been submitted successfully! Transfer ID: {transfer_id}", ephemeral=True)
 
 @bot.tree.command(description="Withdraw funds")
 async def withdraw(interaction: discord.Interaction, amount: float, method: str, in_game_name: str):
+    # Check if command is used in the correct channel
+    if not is_requests_channel(str(interaction.channel_id)):
+        await interaction.response.send_message("This command can only be used in the deposit/withdrawal requests channel.", ephemeral=True)
+        return
+
     # Defer immediately to prevent timeout
     await interaction.response.defer(ephemeral=True)
 
@@ -78,28 +112,122 @@ async def withdraw(interaction: discord.Interaction, amount: float, method: str,
         await interaction.followup.send("Insufficient balance for withdrawal.", ephemeral=True)
         return
 
+    transfer_id = generate_transfer_id()
+    
     # Send request to logs channel
     log_channel = bot.get_channel(int(LOG_CHANNEL_ID))
     
     embed = discord.Embed(title="Withdrawal Request", color=discord.Color.red())
+    embed.add_field(name="Transfer ID", value=transfer_id, inline=True)
     embed.add_field(name="Amount", value=f"${amount:.2f}", inline=True)
     embed.add_field(name="Method", value=method, inline=True)
     embed.add_field(name="In-game Name", value=in_game_name, inline=True)
     embed.add_field(name="User", value=interaction.user.mention, inline=True)
 
-    view = discord.ui.View()
-    view.add_item(discord.ui.Button(style=discord.ButtonStyle.green, label="Accept", custom_id="accept_withdraw"))
-    view.add_item(discord.ui.Button(style=discord.ButtonStyle.red, label="Deny", custom_id="deny_withdraw"))
+    # Store transfer details
+    pending_transfers[transfer_id] = {
+        "type": "withdraw",
+        "user_id": str(interaction.user.id),
+        "amount": amount,
+        "message_id": None
+    }
 
-    await log_channel.send(
+    message = await log_channel.send(
         content="@Admin New withdrawal request!",
-        embed=embed,
-        view=view
+        embed=embed
     )
+    
+    # Store message ID
+    pending_transfers[transfer_id]["message_id"] = message.id
 
     # DM the user
-    await interaction.user.send("Your withdrawal request has been submitted and will be reviewed by a staff member.")
-    await interaction.followup.send("Your withdrawal request has been submitted successfully!", ephemeral=True)
+    await interaction.user.send(f"Your withdrawal request has been submitted. Transfer ID: {transfer_id}")
+    await interaction.followup.send(f"Your withdrawal request has been submitted successfully! Transfer ID: {transfer_id}", ephemeral=True)
+
+@bot.tree.command(description="Accept a transfer request")
+@discord.app_commands.describe(
+    transfer_id="The ID of the transfer to accept"
+)
+async def accept(interaction: discord.Interaction, transfer_id: str):
+    # Check if command is used in the correct channel
+    if not is_requests_channel(str(interaction.channel_id)):
+        await interaction.response.send_message("This command can only be used in the deposit/withdrawal requests channel.", ephemeral=True)
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    if transfer_id not in pending_transfers:
+        await interaction.followup.send("Invalid transfer ID.", ephemeral=True)
+        return
+
+    transfer = pending_transfers[transfer_id]
+    user = await bot.fetch_user(int(transfer["user_id"]))
+    
+    try:
+        user_data = get_user_data(transfer["user_id"])
+        if transfer["type"] == "deposit":
+            user_data["balance"] += transfer["amount"]
+            await user.send(f"Your deposit of ${transfer['amount']:.2f} has been approved by {interaction.user.name}!")
+        else:
+            user_data["balance"] -= transfer["amount"]
+            await user.send(f"Your withdrawal of ${transfer['amount']:.2f} has been approved by {interaction.user.name}!")
+        
+        save_user_data(transfer["user_id"], user_data)
+        
+        # Update the original message
+        log_channel = bot.get_channel(int(LOG_CHANNEL_ID))
+        message = await log_channel.fetch_message(transfer["message_id"])
+        embed = message.embeds[0]
+        embed.color = discord.Color.green()
+        embed.add_field(name="Status", value=f"Approved by {interaction.user.name}", inline=False)
+        await message.edit(embed=embed)
+        
+        # Remove from pending transfers
+        del pending_transfers[transfer_id]
+        
+        await interaction.followup.send("Transfer approved successfully!", ephemeral=True)
+    except Exception as e:
+        print(f"Error in accept command: {e}")
+        await interaction.followup.send("An error occurred while processing the transfer.", ephemeral=True)
+
+@bot.tree.command(description="Deny a transfer request")
+@discord.app_commands.describe(
+    transfer_id="The ID of the transfer to deny"
+)
+async def deny(interaction: discord.Interaction, transfer_id: str):
+    # Check if command is used in the correct channel
+    if not is_requests_channel(str(interaction.channel_id)):
+        await interaction.response.send_message("This command can only be used in the deposit/withdrawal requests channel.", ephemeral=True)
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    if transfer_id not in pending_transfers:
+        await interaction.followup.send("Invalid transfer ID.", ephemeral=True)
+        return
+
+    transfer = pending_transfers[transfer_id]
+    user = await bot.fetch_user(int(transfer["user_id"]))
+    
+    try:
+        action = "deposit" if transfer["type"] == "deposit" else "withdrawal"
+        await user.send(f"Your {action} request of ${transfer['amount']:.2f} has been denied by {interaction.user.name}.")
+        
+        # Update the original message
+        log_channel = bot.get_channel(int(LOG_CHANNEL_ID))
+        message = await log_channel.fetch_message(transfer["message_id"])
+        embed = message.embeds[0]
+        embed.color = discord.Color.red()
+        embed.add_field(name="Status", value=f"Denied by {interaction.user.name}", inline=False)
+        await message.edit(embed=embed)
+        
+        # Remove from pending transfers
+        del pending_transfers[transfer_id]
+        
+        await interaction.followup.send("Transfer denied successfully!", ephemeral=True)
+    except Exception as e:
+        print(f"Error in deny command: {e}")
+        await interaction.followup.send("An error occurred while processing the transfer.", ephemeral=True)
 
 @bot.event
 async def setup_hook():
@@ -113,54 +241,10 @@ def save_user_data(user_id: str, data: dict):
     # Mock save - do nothing
     pass
 
-ADMIN_IDS = ["1107732198221680760", "1314310123421831198"]  # List of admin IDs
-LOG_CHANNEL_ID = "1348308761470828596"
-
-PAYMENT_METHODS = ["In-game", "Vanguard", "Volt", "Voyager"]
-
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name='the Cashino'))
-
-@bot.event
-async def on_button_click(interaction: discord.Interaction):
-    try:
-        # Defer immediately to prevent timeout
-        await interaction.response.defer(ephemeral=True)
-
-        custom_id = interaction.custom_id
-        message = interaction.message
-        embed = message.embeds[0]
-        user_id = embed.fields[3].value[2:-1]  # Extract user ID from mention
-        amount = float(embed.fields[0].value[1:])  # Extract amount
-        user = await bot.fetch_user(int(user_id))
-        
-        if custom_id in ["accept_deposit", "accept_withdraw"]:
-            user_data = get_user_data(user_id)
-            if custom_id == "accept_deposit":
-                user_data["balance"] += amount
-                await user.send(f"Your deposit of ${amount:.2f} has been approved by {interaction.user.name}!")
-            else:
-                user_data["balance"] -= amount
-                await user.send(f"Your withdrawal of ${amount:.2f} has been approved by {interaction.user.name}!")
-            save_user_data(user_id, user_data)
-            await message.edit(view=None)
-            await interaction.followup.send("Request approved!", ephemeral=True)
-        else:
-            action = "deposit" if custom_id == "deny_deposit" else "withdrawal"
-            await user.send(f"Your {action} request of ${amount:.2f} has been denied by {interaction.user.name}.")
-            await message.edit(view=None)
-            await interaction.followup.send("Request denied!", ephemeral=True)
-
-    except Exception as e:
-        print(f"Error in on_button_click: {e}")
-        try:
-            if not interaction.response.is_done():
-                await interaction.response.defer(ephemeral=True)
-            await interaction.followup.send("An error occurred while processing your request.", ephemeral=True)
-        except:
-            print(f"Failed to send error message: {e}")
 
 try:
     token = os.getenv("TOKEN") or ""
