@@ -44,11 +44,6 @@ def is_requests_channel(channel_id: str) -> bool:
     proof="Screenshot of your deposit"
 )
 async def deposit(interaction: discord.Interaction, amount: float, method: str, in_game_name: str, proof: discord.Attachment):
-    # Check if command is used in the correct channel
-    if not is_requests_channel(str(interaction.channel_id)):
-        await interaction.response.send_message("This command can only be used in the deposit/withdrawal requests channel.", ephemeral=True)
-        return
-
     # Defer immediately to prevent timeout
     await interaction.response.defer(ephemeral=True)
 
