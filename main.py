@@ -261,6 +261,21 @@ async def deny(interaction: discord.Interaction, transfer_id: str):
         print(f"Error in deny command: {e}")
         await interaction.followup.send("An error occurred while processing the transfer.", ephemeral=True)
 
+@bot.tree.command(description="Check your current balance")
+async def balance(interaction: discord.Interaction):
+    # Defer immediately to prevent timeout
+    await interaction.response.defer(ephemeral=True)
+
+    # Get user data
+    user_data = get_user_data(str(interaction.user.id))
+    
+    embed = discord.Embed(title="Balance Check", color=discord.Color.green())
+    embed.add_field(name="Balance", value=f"${user_data['balance']:.2f}", inline=True)
+    if user_data["in_game_name"]:
+        embed.add_field(name="In-game Name", value=user_data["in_game_name"], inline=True)
+    
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
 @bot.event
 async def setup_hook():
     await bot.tree.sync()
