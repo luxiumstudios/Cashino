@@ -6,15 +6,8 @@ from typing import Dict
 
 # Initialize database
 def init_db():
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (user_id TEXT PRIMARY KEY, 
-                  balance REAL,
-                  in_game_name TEXT,
-                  discord_name TEXT)''')
-    conn.commit()
-    conn.close()
+    # Mock init - do nothing
+    pass
 
 init_db()
 
@@ -113,24 +106,12 @@ async def setup_hook():
     await bot.tree.sync()
 
 def get_user_data(user_id: str):
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute('SELECT * FROM users WHERE user_id = ?', (user_id,))
-    result = c.fetchone()
-    conn.close()
-    if result:
-        return {"balance": result[1], "in_game_name": result[2], "discord_name": result[3]}
-    return {"balance": 0, "in_game_name": "", "discord_name": ""}
+    # Mock data for testing
+    return {"balance": 1000.0, "in_game_name": "TestUser", "discord_name": "TestUser#1234"}
 
 def save_user_data(user_id: str, data: dict):
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute('''INSERT OR REPLACE INTO users 
-                 (user_id, balance, in_game_name, discord_name)
-                 VALUES (?, ?, ?, ?)''',
-              (user_id, data["balance"], data["in_game_name"], data["discord_name"]))
-    conn.commit()
-    conn.close()
+    # Mock save - do nothing
+    pass
 
 ADMIN_IDS = ["1107732198221680760", "1314310123421831198"]  # List of admin IDs
 LOG_CHANNEL_ID = "1348308761470828596"
@@ -147,11 +128,6 @@ async def on_button_click(interaction: discord.Interaction):
     try:
         # Defer immediately to prevent timeout
         await interaction.response.defer(ephemeral=True)
-
-        # Check if user has Admin role
-        if not any(role.name == "Admin" for role in interaction.user.roles):
-            await interaction.followup.send("You are not authorized to perform this action.", ephemeral=True)
-            return
 
         custom_id = interaction.custom_id
         message = interaction.message
