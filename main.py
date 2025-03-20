@@ -58,6 +58,12 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
         await interaction.followup.send(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}", ephemeral=True)
         return
 
+    # Update user data with in-game name and Discord name
+    user_data = get_user_data(str(interaction.user.id))
+    user_data["in_game_name"] = in_game_name
+    user_data["discord_name"] = str(interaction.user)
+    save_user_data(str(interaction.user.id), user_data)
+
     screenshot = proof
     transfer_id = generate_transfer_id()
     
@@ -109,7 +115,13 @@ async def withdraw(interaction: discord.Interaction, amount: float, method: str,
         await interaction.followup.send(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}", ephemeral=True)
         return
 
-    user_balance = get_user_data(str(interaction.user.id))["balance"]
+    # Update user data with in-game name and Discord name
+    user_data = get_user_data(str(interaction.user.id))
+    user_data["in_game_name"] = in_game_name
+    user_data["discord_name"] = str(interaction.user)
+    save_user_data(str(interaction.user.id), user_data)
+
+    user_balance = user_data["balance"]
     if user_balance < amount:
         await interaction.followup.send("Insufficient balance for withdrawal.", ephemeral=True)
         return
