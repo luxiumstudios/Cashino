@@ -113,7 +113,13 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
     await interaction.followup.send(f"Your deposit request has been submitted successfully! Transfer ID: {transfer_id}", ephemeral=True)
 
 @bot.tree.command(description="Withdraw funds")
-async def withdraw(interaction: discord.Interaction, amount: float, method: str, in_game_name: str):
+@discord.app_commands.describe(
+    amount="Amount to withdraw",
+    method="Payment method",
+    in_game_name="Your in-game name",
+    transfer_number="Optional transfer number for tracking"
+)
+async def withdraw(interaction: discord.Interaction, amount: float, method: str, in_game_name: str, transfer_number: str = None):
     # Check if command is used in the correct channel
     if not is_requests_channel(str(interaction.channel_id)):
         await interaction.response.send_message("This command can only be used in the deposit/withdrawal requests channel.", ephemeral=True)
@@ -150,6 +156,8 @@ async def withdraw(interaction: discord.Interaction, amount: float, method: str,
     
     embed = discord.Embed(title="Withdrawal Request", color=discord.Color.red())
     embed.add_field(name="Transfer ID", value=transfer_id, inline=True)
+    if transfer_number:
+        embed.add_field(name="Transfer Number", value=transfer_number, inline=True)
     embed.add_field(name="Amount", value=f"${amount:.2f}", inline=True)
     embed.add_field(name="Method", value=method, inline=True)
     embed.add_field(name="In-game Name", value=in_game_name, inline=True)
