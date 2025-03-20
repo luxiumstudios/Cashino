@@ -58,8 +58,19 @@ async def deposit(interaction: discord.Interaction, amount: float, method: str, 
         await interaction.followup.send(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}", ephemeral=True)
         return
 
-    # Update user data with in-game name and Discord name
+    # Get current user data
     user_data = get_user_data(str(interaction.user.id))
+    
+    # Security check: Verify in-game name matches stored name
+    if user_data["in_game_name"] and user_data["in_game_name"] != in_game_name:
+        await interaction.followup.send(
+            "Security check failed: The provided in-game name does not match your previously registered name. "
+            "If you have changed your in-game name, please contact an administrator to update your records.",
+            ephemeral=True
+        )
+        return
+
+    # Update user data with in-game name and Discord name
     user_data["in_game_name"] = in_game_name
     user_data["discord_name"] = str(interaction.user)
     save_user_data(str(interaction.user.id), user_data)
@@ -115,11 +126,17 @@ async def withdraw(interaction: discord.Interaction, amount: float, method: str,
         await interaction.followup.send(f"Invalid payment method. Please choose from: {', '.join(PAYMENT_METHODS)}", ephemeral=True)
         return
 
-    # Update user data with in-game name and Discord name
+    # Get current user data
     user_data = get_user_data(str(interaction.user.id))
-    user_data["in_game_name"] = in_game_name
-    user_data["discord_name"] = str(interaction.user)
-    save_user_data(str(interaction.user.id), user_data)
+    
+    # Security check: Verify in-game name matches stored name
+    if user_data["in_game_name"] and user_data["in_game_name"] != in_game_name:
+        await interaction.followup.send(
+            "Security check failed: The provided in-game name does not match your previously registered name. "
+            "If you have changed your in-game name, please contact an administrator to update your records.",
+            ephemeral=True
+        )
+        return
 
     user_balance = user_data["balance"]
     if user_balance < amount:
