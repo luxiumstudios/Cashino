@@ -7,8 +7,15 @@ import random
 
 # Initialize database
 def init_db():
-    # Mock init - do nothing
-    pass
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users
+                 (user_id TEXT PRIMARY KEY,
+                  balance REAL DEFAULT 0.0,
+                  in_game_name TEXT,
+                  discord_name TEXT)''')
+    conn.commit()
+    conn.close()
 
 init_db()
 
@@ -228,13 +235,33 @@ async def deny(interaction: discord.Interaction, transfer_id: str):
 async def setup_hook():
     await bot.tree.sync()
 
-def get_user_data(user_id: str):
-    # Mock data for testing
-    return {"balance": 1000.0, "in_game_name": "TestUser", "discord_name": "TestUser#1234"}
+def get_user_data(user_id: str) -> Dict:
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('SELECT * FROM users WHERE user_id = ?', (user_id,))
+    row = c.fetchone()
+    conn.close()
+    
+    if row is None:
+        # Create new user if they don't exist
+        default_data = {"balance": 0.0, "in_game_name": "", "discord_name": ""}
+        save_user_data(user_id, default_data)
+        return default_data
+    
+    return {
+        "balance": row[1],
+        "in_game_name": row[2] or "",
+        "discord_name": row[3] or ""
+    }
 
 def save_user_data(user_id: str, data: dict):
-    # Mock save - do nothing
-    pass
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('''INSERT OR REPLACE INTO users (user_id, balance, in_game_name, discord_name)
+                 VALUES (?, ?, ?, ?)''',
+              (user_id, data["balance"], data.get("in_game_name", ""), data.get("discord_name", "")))
+    conn.commit()
+    conn.close()
 
 @bot.event
 async def on_ready():
